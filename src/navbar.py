@@ -13,5 +13,5 @@ def mostrar_navbar():
         st.header("Navegación")
         st.page_link("app.py", label="Inicio", icon="🏠")
         st.page_link("pages/01_Interfaz_1.py", label="Gestión de Flota", icon="🚚")
-        st.page_link("pages/02_Interfaz_2.py", label="Conductores", icon="👤")
-        st.page_link("pages/03_Interfaz_3.py", label="Rutas y Logística", icon="🗺️")
+        st.page_link("pages/02_Interfaz_2.py", label="Cajas", icon="📦")
+        st.page_link("pages/03_Interfaz_3.py", label="control de comustible", icon="⛽")
