@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 from src.navbar import mostrar_navbar
 
 # Configuración de la página
@@ -112,50 +113,77 @@ with tab1:
 
 # --- PESTAÑA 2: SERVICIOS (Nueva funcionalidad) ---
 with tab2:
-    st.header("Historial y Programación de Servicios")
+    st.header("🔧 Monitor de Mantenimiento Preventivo")
+    st.markdown("El sistema calcula automáticamente el desgaste basado en el kilometraje actual vs. el último servicio.")
     
-    with st.expander("🛠️ Registrar Mantenimiento / Actualizar Kilometraje"):
-        # Formulario simplificado para servicios
-        # NOTA TÉCNICA: El campo de selección de unidad debe ser un st.selectbox.
-        # Debe poblarse concatenando "Unidad - Marca - Año" desde la base de datos.
-        # Dado que la flota es pequeña, no hay problemas de rendimiento al cargar todos los registros.
-        st.info("📝 Nota: El sistema traerá un menú desplegable con la Unidad, Marca y Año de los vehículos.")
+    # Definición de Reglas de Negocio (Tus requerimientos exactos)
+    REGLAS_MANTENIMIENTO = {
+        "Lubricación (Crucetas, 5ta rueda)": 10000,
+        "Sistema Enfriamiento": 25000,
+        "Aceite y Filtros (Motor/Trans)": 30000,
+        "Frenos (Balatas)": 40000,
+        "Filtro de Aire": 40000,
+        "Frenos (Líquido)": 100000,
+        "Masa Ruedas (Rodamientos/Retenes)": 100000
+    }
+
+    with st.expander("🛠️ Registrar Servicio Realizado (Resetear Contador)"):
+        st.info("Utilice este formulario cuando el mecánico haya completado una tarea para reiniciar el contador de kilometraje de ese servicio.")
         s_col1, s_col2, s_col3 = st.columns(3)
         with s_col1:
-            s_unidad = st.text_input("UNIDAD a actualizar", placeholder="Ej. T-101")
+            s_unidad = st.selectbox("UNIDAD", ["T-101", "T-102", "T-103", "T-104", "T-105"])
         with s_col2:
-            s_km_actual = st.number_input("KILOMETRAJE ACTUAL", min_value=0, step=100)
+            # Seleccionar cuál de los servicios específicos se realizó
+            s_servicio = st.selectbox("TIPO DE SERVICIO REALIZADO", list(REGLAS_MANTENIMIENTO.keys()))
         with s_col3:
             s_fecha = st.date_input("FECHA SERVICIO")
             
-        s_col4, s_col5 = st.columns(2)
-        with s_col4:
-            s_ultimo = st.text_input("ULTIMO SERVICIO", placeholder="Ej. Cambio de Aceite")
-        with s_col5:
-            s_proximo = st.number_input("PROXIMO SERVICIO", min_value=0, step=5000)
+        s_notas = st.text_area("Notas del Mecánico", placeholder="Ej. Se cambiaron balatas delanteras marca X...")
             
-        if st.button("Registrar Servicio", type="primary"):
-            st.success(f"Servicio registrado para la unidad {s_unidad}")
+        if st.button("✅ Confirmar Servicio Realizado", type="primary"):
+            st.success(f"Contador de '{s_servicio}' reiniciado para la unidad {s_unidad}.")
 
     st.markdown("---")
-    st.subheader("📊 Tabla de Control de Servicios")
+    st.subheader("🚦 Semáforo de Salud de la Flota")
     
-    # Datos ficticios para servicios (Coincidiendo con las columnas solicitadas)
-    data_servicios = {
-        "UNIDAD": ["T-101", "T-102", "T-103", "T-104", "T-105"],
-        "MARCA": ["Kenworth", "Volvo", "Freightliner", "International", "Kenworth"],
-        "TIPO": ["Tracto Físico-Mecánico", "Tracto Humos", "Tracto Físico-Mecánico", "Tracto Humos", "Tracto Físico-Mecánico"],
-        "MOD.": ["T680", "VNL 760", "Cascadia", "LT Series", "T880"],
-        "SERIE": ["1M1...589", "4V4...123", "3A3...789", "1H1...456", "2K2...001"],
-        "Tarjeta de Circulacion": ["TC-998877", "TC-112233", "TC-445566", "TC-778899", "TC-001122"],
-        "PLACA": ["58-AK-9C", "12-UE-4F", "89-PL-1A", "45-TR-2B", "90-MN-5X"],
-        "ULTIMO SERVICIO": ["Cambio Aceite", "Frenos", "Afinación", "Llantas", "General"],
-        "FECHA SERVICIO": ["2023-12-01", "2023-11-15", "2023-10-20", "2023-09-10", "2024-01-05"],
-        "PROXIMO": [150000, 280000, 95000, 310000, 55000],
-        "PROXIMO SERVICIO": [150000, 280000, 95000, 310000, 55000],
-        "KILOMETRAJE ACTUAL": [145000, 278000, 92000, 305000, 50000],
-        "KM PARA RECC. 25000KM": [5000, 2000, 3000, 5000, 5000]
-    }
+    # --- LÓGICA DE SIMULACIÓN DE ESTADO ---
+    # En una app real, esto vendría de comparar (Km Actual - Km Ultimo Servicio) vs Regla
     
-    df_servicios = pd.DataFrame(data_servicios)
-    st.dataframe(df_servicios, use_container_width=True, hide_index=True)
+    # Creamos un DataFrame donde las filas son las Unidades y las columnas son los Servicios
+    unidades = ["T-101", "T-102", "T-103", "T-104", "T-105"]
+    
+    # Generamos datos aleatorios de "Km recorridos desde último servicio"
+    # Algunos estarán cerca del límite (Rojo), otros lejos (Verde)
+    data_matrix = {}
+    for servicio, limite in REGLAS_MANTENIMIENTO.items():
+        # Generamos valores aleatorios entre 0 y el límite + un poco más (para simular vencidos)
+        valores = np.random.randint(0, int(limite * 1.2), size=5)
+        data_matrix[f"{servicio} (Cada {limite//1000}k)"] = valores
+
+    df_semaforo = pd.DataFrame(data_matrix, index=unidades)
+    
+    # Función para colorear la celda según el porcentaje de uso
+    def estilo_semaforo(val):
+        # Extraemos el límite del nombre de la columna (ej. "Aceite (Cada 30k)")
+        # Esto es un hack visual para la demo, en prod se hace con diccionarios
+        import re
+        match = re.search(r'(\d+)k', val.name)
+        if match:
+            limite = int(match.group(1)) * 1000
+            
+            styles = []
+            for v in val:
+                porcentaje = v / limite
+                if porcentaje >= 1.0:
+                    styles.append('background-color: #ff4b4b; color: white') # Rojo Vencido
+                elif porcentaje >= 0.8:
+                    styles.append('background-color: #ffbd45; color: black') # Amarillo Alerta
+                else:
+                    styles.append('background-color: #90ee90; color: black') # Verde OK
+            return styles
+        return [''] * len(val)
+
+    # Mostramos la tabla con el estilo aplicado
+    st.dataframe(df_semaforo.style.apply(estilo_semaforo, axis=0), use_container_width=True)
+    
+    st.caption("🟢 Verde: OK | 🟡 Amarillo: Próximo a vencer (>80%) | 🔴 Rojo: Vencido (Atención Inmediata)")
